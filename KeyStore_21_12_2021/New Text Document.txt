@@ -1,0 +1,2 @@
+Key store Pass word : 123456
+Key alias password : key123456
