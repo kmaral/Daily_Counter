@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:my_counter/models/CounterInfo.dart';
 import 'package:my_counter/models/CounterInfoHistory.dart';
 import 'package:my_counter/models/ResetCounterInfo.dart';
@@ -225,26 +226,30 @@ class CounterDBHelper {
   Future<int> delete(int counterId) async {
     final db = await database;
     int resultdelete = 0;
-    int resultcounter = await db.delete(tableResetCounterHistory,
-        where: 'counterId = ?', whereArgs: [counterId]);
-    if (resultcounter > 0) {
+
+    resultdelete = await db
+        .delete(tableCounters, where: 'counterId = ?', whereArgs: [counterId]);
+    if (resultdelete > 0) {
       int historyResult = await db.delete(tableCounterHistory,
           where: 'counterId = ?', whereArgs: [counterId]);
 
       if (historyResult > 0) {
-        resultdelete = await db.delete(tableCounters,
+        int resultcounter = await db.delete(tableResetCounterHistory,
             where: 'counterId = ?', whereArgs: [counterId]);
-        if (resultdelete > 0) {
-          var result;
-
-          result = await db.query(tableCounters);
-          if (result != null) {
-            result.forEach((element) {
-              var counterInfo = CounterInfo.fromMap(element);
-              print(counterInfo.counterId);
-            });
-          }
+        if (resultcounter > 0) {
+          return resultcounter;
         }
+        return historyResult;
+      }
+
+      var result;
+
+      result = await db.query(tableCounters);
+      if (result != null) {
+        result.forEach((element) {
+          var counterInfo = CounterInfo.fromMap(element);
+          print(counterInfo.counterId);
+        });
       }
     }
     return resultdelete;
@@ -266,6 +271,8 @@ class CounterDBHelper {
 
   Future<int> incrementCounter(
       int counterId, int counter, String lasttimestamp) async {
+    DateTime timestamp = DateTime.now();
+    DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
     var db = await this.database;
     int updateCount = await db.rawUpdate('''
     UPDATE $tableCounters
@@ -274,12 +281,14 @@ class CounterDBHelper {
     ''', [counter, lasttimestamp, counterId]);
     _insertCounterHistory(
         counterId, counter.toString() + " (+)", lasttimestamp);
-    updateResetCounter(counterId, counter);
+    updateResetCounter(counterId, counter, formatter.format(timestamp));
     return updateCount;
   }
 
   Future<int> decrementCounter(
       int counterId, int counter, String lasttimestamp) async {
+    DateTime timestamp = DateTime.now();
+    DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
     var db = await this.database;
     int updateCount = await db.rawUpdate('''
     UPDATE $tableCounters
@@ -288,12 +297,12 @@ class CounterDBHelper {
     ''', [counter, lasttimestamp, counterId]);
     _insertCounterHistory(
         counterId, counter.toString() + " (-)", lasttimestamp);
-    updateResetCounter(counterId, counter);
+    updateResetCounter(counterId, counter, formatter.format(timestamp));
     return updateCount;
   }
 
-  Future<int> updateCounterNumber(
-      int counterId, int counterNumber, String lasttimestamp) async {
+  Future<int> updateCounterNumber(int counterId, int counterNumber,
+      String lasttimestamp, String value) async {
     var db = await this.database;
     int updateCount = await db.rawUpdate('''
     UPDATE $tableCounters
@@ -301,7 +310,7 @@ class CounterDBHelper {
     WHERE $columncounterId = ?
     ''', [counterNumber, lasttimestamp, counterId]);
     _insertCounterHistory(
-        counterId, counterNumber.toString() + " (Reset)", lasttimestamp);
+        counterId, counterNumber.toString() + value, lasttimestamp);
     return updateCount;
   }
 
@@ -349,13 +358,26 @@ class CounterDBHelper {
     return updateCount;
   }
 
-  Future<int> updateResetCounter(int counterId, int counterNumber) async {
+  Future<int> updateResetCounterTimestamp1(
+      int counterId, int counterNumber) async {
     var db = await this.database;
     int updateCount = await db.rawUpdate('''
     UPDATE $tableResetCounterHistory
     SET $columnresetCounter = ?
     WHERE $columncounterId = ? and $columnIsCounterreset = ?''',
         [counterNumber, counterId, 1]);
+    return updateCount;
+  }
+
+  Future<int> updateResetCounter(
+      int counterId, int counterNumber, String endTimestamp) async {
+    var db = await this.database;
+    int updateCount = await db.rawUpdate('''
+    UPDATE $tableResetCounterHistory
+    SET $columnresetCounter = ?,$columncounterendtimestamp=?
+    WHERE $columncounterId = ? and $columnIsCounterreset = ?''',
+        [counterNumber, endTimestamp, counterId, 1]);
+
     return updateCount;
   }
 }

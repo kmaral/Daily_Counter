@@ -134,7 +134,7 @@ class _UpdateCounterState extends State<UpdateCounter> {
     _counterDBHelper.insertResetCounters(
         counters[0].counterId, 0, formatter.format(timestamp), 1);
     _counterDBHelper.updateCounterNumber(
-        counters[0].counterId, 0, formatter.format(timestamp));
+        counters[0].counterId, 0, formatter.format(timestamp), " (Reset)");
     setState(() {
       // var resetCounterUpdateInfo = ResetCounterInfo(
       //     counterId: counters[0].counterId,

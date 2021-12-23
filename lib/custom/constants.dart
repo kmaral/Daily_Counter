@@ -2,6 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class Contstants {
+  static textGetDays(String lastUpdatetimeStamp, String createdTimeStamp) {
+    var createdDate = DateTime.tryParse(createdTimeStamp);
+    var lastUpdatedDate = DateTime.tryParse(lastUpdatetimeStamp);
+    Duration duration = daysElapsedSince(createdDate, lastUpdatedDate);
+
+    int days = 0;
+    days = duration.inDays + 1;
+    // if (createdDate != null && lastUpdatedDate != null) {
+    //   // int years = lastUpdatedDate.year - createdDate.year;
+    //   // int months = lastUpdatedDate.month - createdDate.month;
+    //   days = lastUpdatedDate.day - createdDate.day;
+
+    //   // if (months < 0 || (months == 0 && days < 0)) {
+    //   //   years--;
+    //   //   months += (days < 0 ? 11 : 12);
+    //   // }
+
+    //   // if (days < 0) {
+    //   //   final monthAgo =
+    //   //       new DateTime(now.year, now.month - 1, selectedDate.day);
+    //   //   days = lastUpdatedDate.difference(monthAgo).inDays + 1;
+    //   // }
+    // }
+    return days;
+  }
+
   static Text displayTimer(Duration duration, String timestamp) {
     var selectedDate = DateTime.tryParse(timestamp);
     if (selectedDate != null) {

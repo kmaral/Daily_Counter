@@ -178,8 +178,16 @@ class _CounterStatsState extends State<CounterStats> {
 
   _updateCounterDates(
       String createdDatetime, String lastDatetime, int counter) async {
+    DateTime timestamp = DateTime.now();
+    DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
     _counterDBHelper.updateCountersDateTime(
         counters[0].counterId, createdDatetime, lastDatetime, counter);
+
+    _counterDBHelper.updateResetCounter(
+        counters[0].counterId, counter, formatter.format(timestamp));
+
+    _counterDBHelper.updateCounterNumber(
+        counters[0].counterId, counter, lastDatetime, " (Update Dates)");
   }
 
   void handleClick(String value) async {
@@ -517,7 +525,7 @@ class _CounterStatsState extends State<CounterStats> {
                                             Align(
                                                 alignment:
                                                     Alignment.centerRight,
-                                                child: counters.length > 0
+                                                child: resetCounters.length > 1
                                                     ? Contstants.displayTimer(
                                                         lastResetOnduration,
                                                         resetCounters[1]
@@ -685,76 +693,75 @@ class _CounterStatsState extends State<CounterStats> {
                   isLoadingpage
                       ? Card(
                           color: Colors.grey[300],
-                          child: historyCounters.length <= 0
-                              ? Container(
-                                  child: Icon(Icons.emoji_nature_outlined))
-                              : ListView.builder(
-                                  itemCount: historyCounters.length,
-                                  itemBuilder: (context, index) {
-                                    return Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  (historyCounters.length -
-                                                              index)
-                                                          .toString() +
-                                                      ".",
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize: 15.0,
-                                                    color: Colors.black,
-                                                  ),
-                                                ),
-                                                SizedBox(width: 20.0),
-                                                Expanded(
-                                                  child: Text(
-                                                    historyCounters[index]
-                                                                .counter !=
-                                                            null
-                                                        ? historyCounters[index]
-                                                            .counter
-                                                        : "0",
-                                                    textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                      fontSize: 20.0,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
-                                                ),
-                                                SizedBox(width: 20.0),
-                                                Expanded(
-                                                  child: Text(
-                                                    historyCounters[index]
-                                                                .lasttimeStamp !=
-                                                            null
-                                                        ? historyCounters[index]
-                                                            .lasttimeStamp
-                                                        : "",
-                                                    textAlign: TextAlign.end,
-                                                    style: TextStyle(
-                                                      fontSize: 16.0,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
+                          child:
+                              // historyCounters.length < 1
+                              //     ? Container(
+                              //         child: Icon(Icons.emoji_nature_outlined))
+                              //     :
+                              ListView.builder(
+                            itemCount: historyCounters.length,
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            (historyCounters.length - index)
+                                                    .toString() +
+                                                ".",
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 15.0,
+                                              color: Colors.black,
                                             ),
-                                            SizedBox(
-                                              height: 20.0,
+                                          ),
+                                          SizedBox(width: 20.0),
+                                          Expanded(
+                                            child: Text(
+                                              historyCounters[index].counter !=
+                                                      null
+                                                  ? historyCounters[index]
+                                                      .counter
+                                                  : "0",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 20.0,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black,
+                                              ),
                                             ),
-                                          ]),
-                                    );
-                                  },
-                                ))
+                                          ),
+                                          SizedBox(width: 20.0),
+                                          Expanded(
+                                            child: Text(
+                                              historyCounters[index]
+                                                          .lasttimeStamp !=
+                                                      null
+                                                  ? historyCounters[index]
+                                                      .lasttimeStamp
+                                                  : "",
+                                              textAlign: TextAlign.end,
+                                              style: TextStyle(
+                                                fontSize: 16.0,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(
+                                        height: 20.0,
+                                      ),
+                                    ]),
+                              );
+                            },
+                          ))
                       : Center(
                           child: SpinKitFadingFour(
                             color: Colors.blue,
@@ -1063,6 +1070,9 @@ class _CounterStatsState extends State<CounterStats> {
                               ),
                               ElevatedButton.icon(
                                 onPressed: () async {
+                                  int days = Contstants.textGetDays(
+                                      textFieldlastUpdateController.text,
+                                      textFieldCreateController.text);
                                   if (DateTime.parse(
                                           textFieldlastUpdateController.text)
                                       .isAfter(DateTime.parse(
@@ -1081,21 +1091,20 @@ class _CounterStatsState extends State<CounterStats> {
                                           textFieldCreateController.text;
                                       counterlastTimestamp =
                                           textFieldlastUpdateController.text;
-                                      counterValue =
-                                          createdOnduration.inDays.toString();
+                                      counterValue = days.toString();
                                       counters[0].createdtimeStamp =
                                           textFieldCreateController.text;
                                       counters[0].lasttimeStamp =
                                           textFieldlastUpdateController.text;
-                                      counters[0].counter =
-                                          createdOnduration.inDays;
+                                      counters[0].counter = days;
                                     });
 
                                     _updateCounterDates(
                                         textFieldCreateController.text,
                                         textFieldlastUpdateController.text,
-                                        createdOnduration.inDays);
-
+                                        days);
+                                    _loadResetCounter();
+                                    _loadHistoryCounter();
                                     Navigator.pop(context);
                                   } else {
                                     showAlertDialog(
