@@ -1,7 +1,7 @@
 Daily Counter: Privacy policy
 Welcome to the Daily Counter app for Android!
 
-This is an open source Android app developed by Ketan Marali. The source code is available on GitHub under the MIT license; the app is also available on Google Play.
+This is an open source Android app developed by Ketan Marali. The source code is available on GitHub under the GNU General Public License v3.0 license; the app is also available on Google Play.
 
 As an avid Android user myself, I take privacy very seriously. I know how irritating it is when apps collect your data without your knowledge.
 
