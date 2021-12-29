@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:my_counter/custom/constants.dart';
 import 'package:my_counter/pages/UpdateCounter.dart';
 import 'package:my_counter/pages/about.dart';
 import 'package:my_counter/pages/archive_list.dart';
 import 'package:my_counter/pages/save.dart';
 import 'package:my_counter/services/counter_dbhelper.dart';
+import 'package:my_counter/services/counter_sharedpref.dart';
 import '../models/CounterInfo.dart';
 
 class Home extends StatefulWidget {
@@ -17,6 +19,7 @@ class _HomeState extends State<Home> {
   List<CounterInfo> counters = [];
   var _counters;
   bool isLoading = false;
+  bool _isDark = false;
   CounterDBHelper _counterDBHelper = CounterDBHelper();
   @override
   void initState() {
@@ -24,8 +27,22 @@ class _HomeState extends State<Home> {
       print('------database intialized');
       _loadCounter();
     });
+    getSFvalue();
     isLoading = true;
     super.initState();
+  }
+
+  void getSFvalue() async {
+    String value = await CounterSharedPref.getTheme("themeInfo");
+    if (value != null && value == "true") {
+      setState(() {
+        _isDark = true;
+      });
+    } else {
+      setState(() {
+        _isDark = false;
+      });
+    }
   }
 
   void _loadCounter() async {
@@ -94,175 +111,165 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onBackPressed,
-      child: Center(
-        child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: Scaffold(
-              backgroundColor: Colors.white,
-              appBar: AppBar(
-                title: Text('Active Counter List'),
-                centerTitle: true,
-                automaticallyImplyLeading: false,
-                actions: [
-                  // IconButton(
-                  //     onPressed: () {
-                  //       Navigator.push(
-                  //         context,
-                  //         MaterialPageRoute(builder: (context) => Settings()),
-                  //       );
-                  //     },
-                  //     icon: Icon(Icons.settings)),
-                  RotatedBox(
-                    quarterTurns: 2,
-                    child: Container(
-                      child: PopupMenuButton<String>(
-                        //color: Colors.amber[300],
-                        onSelected: handleClick,
-                        itemBuilder: (BuildContext context) {
-                          return {'Archive List', 'About Daily Counter'}
-                              .map((String choice) {
-                            return PopupMenuItem<String>(
-                              value: choice,
-                              child: Container(child: Text(choice)),
-                            );
-                          }).toList();
-                        },
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      darkTheme: Contstants.getTheme("dark"),
+      theme: Contstants.getTheme("light"),
+      themeMode: _isDark ? ThemeMode.dark : ThemeMode.light,
+      home: WillPopScope(
+        onWillPop: _onBackPressed,
+        child: Center(
+          child: GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: Scaffold(
+                backgroundColor: _isDark ? Colors.grey[850] : Colors.white,
+                appBar: AppBar(
+                  title: Text('Active Counter List'),
+                  centerTitle: true,
+                  backgroundColor:
+                      _isDark ? Colors.blueGrey : Colors.blueAccent[200],
+                  automaticallyImplyLeading: false,
+                  actions: [
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _isDark = !_isDark;
+                        });
+                        CounterSharedPref.setTheme(_isDark.toString());
+                      },
+                      icon: Icon(Icons.light_mode_rounded),
+                      color: _isDark ? Colors.white : Colors.black,
+                    ),
+                    RotatedBox(
+                      quarterTurns: 2,
+                      child: Container(
+                        child: PopupMenuButton<String>(
+                          //color: Colors.amber[300],
+                          onSelected: handleClick,
+                          itemBuilder: (BuildContext context) {
+                            return {'Archive List', 'About Daily Counter'}
+                                .map((String choice) {
+                              return PopupMenuItem<String>(
+                                value: choice,
+                                child: Container(child: Text(choice)),
+                              );
+                            }).toList();
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              floatingActionButton: FloatingActionButton(
-                onPressed: () {
-                  saveCounters(context);
-                },
-                child: Icon(Icons.add_box),
-                backgroundColor: Colors.grey[800],
-              ),
-              body: isLoading && counters.length <= 0
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          height: 2.0,
-                        ),
-                        Align(
-                          alignment: Alignment.center,
-                          child: Text(
-                            "You don't have any exitsting counters. \n\n"
-                            "Add a counter by hitting the plus button below.",
-                            style: TextStyle(
-                                fontSize: 17, fontWeight: FontWeight.bold),
+                  ],
+                ),
+                floatingActionButton: FloatingActionButton(
+                  onPressed: () {
+                    saveCounters(context);
+                  },
+                  child: Icon(Icons.add_box),
+                  backgroundColor:
+                      _isDark ? Colors.blueGrey : Colors.blueAccent[200],
+                ),
+                body: isLoading && counters.length <= 0
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            height: 2.0,
                           ),
-                        ),
-                      ],
-                    )
-                  : isLoading
-                      ? Stack(children: [
-                          ListView.builder(
-                            itemCount: counters.length,
-                            itemBuilder: (context, index) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 1.0, horizontal: 4.0),
-                                child: Card(
-                                  color: Colors.grey[300],
-                                  margin: EdgeInsets.fromLTRB(
-                                      16.0, 16.0, 16.0, 0.0),
-                                  child: InkWell(
-                                    splashColor: Colors.white,
-                                    onTap: () async {
-                                      final List<CounterInfo> result =
-                                          await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) => UpdateCounter(
-                                                counterId:
-                                                    counters[index].counterId)),
-                                      );
-                                      setState(() {
-                                        if (result != null &&
-                                            result.length > 0) {
-                                          counters[index].lasttimeStamp =
-                                              result[0].lasttimeStamp;
-                                          counters[index].counter =
-                                              result[0].counter;
-                                          counters[index].counterName =
-                                              result[0].counterName;
-                                          counters[index].createdtimeStamp =
-                                              result[0].createdtimeStamp;
-                                        }
-                                      });
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(10.0),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          ListTile(
-                                            title: Text(
-                                              counters[index].counterName,
-                                              style: TextStyle(
-                                                fontSize: 22.0,
-                                                color: Colors.pink[900],
-                                                fontWeight: FontWeight.bold,
+                          Align(
+                            alignment: Alignment.center,
+                            child: Text(
+                              "You don't have any exitsting counters. \n\n"
+                              "Add a counter by hitting the plus button below.",
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: _isDark ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : isLoading
+                        ? Stack(children: [
+                            ListView.builder(
+                              itemCount: counters.length,
+                              itemBuilder: (context, index) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 1.0, horizontal: 4.0),
+                                  child: Card(
+                                    color: Colors.grey[300],
+                                    margin: EdgeInsets.fromLTRB(
+                                        16.0, 16.0, 16.0, 0.0),
+                                    child: InkWell(
+                                      splashColor: Colors.white,
+                                      onTap: () async {
+                                        final List<CounterInfo> result =
+                                            await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  UpdateCounter(
+                                                      counterId: counters[index]
+                                                          .counterId)),
+                                        );
+                                        setState(() {
+                                          if (result != null &&
+                                              result.length > 0) {
+                                            counters[index].lasttimeStamp =
+                                                result[0].lasttimeStamp;
+                                            counters[index].counter =
+                                                result[0].counter;
+                                            counters[index].counterName =
+                                                result[0].counterName;
+                                            counters[index].createdtimeStamp =
+                                                result[0].createdtimeStamp;
+                                          }
+                                        });
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(10.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.start,
+                                          children: [
+                                            ListTile(
+                                              title: Text(
+                                                counters[index].counterName,
+                                                style: TextStyle(
+                                                  fontSize: 22.0,
+                                                  color: Colors.pink[900],
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
-                                            ),
-                                            subtitle: Text(
-                                              'Count: ' +
-                                                  counters[index]
-                                                      .counter
-                                                      .toString(),
-                                              style: TextStyle(
-                                                fontSize: 18.0,
-                                                color: Colors.pink[900],
-                                                fontWeight: FontWeight.bold,
+                                              subtitle: Text(
+                                                'Count: ' +
+                                                    counters[index]
+                                                        .counter
+                                                        .toString(),
+                                                style: TextStyle(
+                                                  fontSize: 18.0,
+                                                  color: Colors.pink[900],
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
+                                              trailing: Icon(
+                                                  Icons.fast_forward_sharp),
                                             ),
-                                            trailing:
-                                                Icon(Icons.fast_forward_sharp),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.fromLTRB(
-                                                12.0, 0.0, 0.0, 0.0),
-                                            child: Container(
-                                              child: Column(
-                                                children: [
-                                                  Row(
-                                                    children: [
-                                                      Text(
-                                                        'Created Date : ',
-                                                        style: TextStyle(
-                                                          fontSize: 15.0,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color:
-                                                              Colors.grey[800],
-                                                        ),
-                                                      ),
-                                                      Text(
-                                                        counters[index]
-                                                            .createdtimeStamp,
-                                                        style: TextStyle(
-                                                          fontSize: 15.0,
-                                                          color:
-                                                              Colors.grey[800],
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Padding(
-                                                    padding: const EdgeInsets
-                                                            .fromLTRB(
-                                                        0.0, 5.0, 0.0, 5.0),
-                                                    child: Row(
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      12.0, 0.0, 0.0, 0.0),
+                                              child: Container(
+                                                child: Column(
+                                                  children: [
+                                                    Row(
                                                       children: [
                                                         Text(
-                                                          'Last Updated : ',
+                                                          'Created Date : ',
                                                           style: TextStyle(
                                                             fontSize: 15.0,
                                                             fontWeight:
@@ -273,7 +280,7 @@ class _HomeState extends State<Home> {
                                                         ),
                                                         Text(
                                                           counters[index]
-                                                              .lasttimeStamp,
+                                                              .createdtimeStamp,
                                                           style: TextStyle(
                                                             fontSize: 15.0,
                                                             color: Colors
@@ -282,26 +289,55 @@ class _HomeState extends State<Home> {
                                                         ),
                                                       ],
                                                     ),
-                                                  ),
-                                                ],
+                                                    Padding(
+                                                      padding: const EdgeInsets
+                                                              .fromLTRB(
+                                                          0.0, 5.0, 0.0, 5.0),
+                                                      child: Row(
+                                                        children: [
+                                                          Text(
+                                                            'Last Updated : ',
+                                                            style: TextStyle(
+                                                              fontSize: 15.0,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color: Colors
+                                                                  .grey[800],
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            counters[index]
+                                                                .lasttimeStamp,
+                                                            style: TextStyle(
+                                                              fontSize: 15.0,
+                                                              color: Colors
+                                                                  .grey[800],
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
-                        ])
-                      : Center(
-                          child: SpinKitFadingFour(
-                            color: Colors.blue,
-                            size: 50.0,
-                          ),
-                        )),
+                                );
+                              },
+                            ),
+                          ])
+                        : Center(
+                            child: SpinKitFadingFour(
+                              color: Colors.blue,
+                              size: 50.0,
+                            ),
+                          )),
+          ),
         ),
       ),
     );
