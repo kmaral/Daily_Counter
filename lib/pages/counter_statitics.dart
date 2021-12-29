@@ -10,6 +10,7 @@ import 'package:my_counter/models/ResetCounterInfo.dart';
 import 'package:my_counter/pages/home.dart';
 import 'package:my_counter/pages/loading.dart';
 import 'package:my_counter/services/counter_dbhelper.dart';
+import 'package:my_counter/services/counter_sharedpref.dart';
 
 class CounterStats extends StatefulWidget {
   final int counterId;
@@ -46,6 +47,8 @@ class _CounterStatsState extends State<CounterStats> {
   bool isLoadingpage = false;
   bool isLoading = false;
   int rawDeleted = 0;
+  bool _isDark = false;
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +57,7 @@ class _CounterStatsState extends State<CounterStats> {
       _getCounterByid();
       _loadResetCounter();
     });
+    getSFvalue();
   }
 
   _updateCounters(String counterName) async {
@@ -235,542 +239,662 @@ class _CounterStatsState extends State<CounterStats> {
     _timer.cancel();
   }
 
+  void getSFvalue() async {
+    String value = await CounterSharedPref.getTheme("themeInfo");
+    if (value != null && value == "true") {
+      setState(() {
+        _isDark = true;
+      });
+    } else {
+      setState(() {
+        _isDark = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: DefaultTabController(
-        length: 3,
-        child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: Scaffold(
-            appBar: AppBar(
-              bottom: const TabBar(
-                tabs: [
-                  Tab(
-                    child: Text('Counter Info'),
-                  ),
-                  Tab(
-                    child: Text('Reset Counter History'),
-                  ),
-                  Tab(
-                    child: Text('Counter Update History'),
-                  ),
-                ],
-              ),
-              actions: [
-                RotatedBox(
-                  quarterTurns: 4,
-                  child: Container(
-                    child: PopupMenuButton<String>(
-                      //color: Colors.amber[300],
-                      onSelected: handleClick,
-                      itemBuilder: (BuildContext context) {
-                        if (isDeleted == 1) {
-                          return {'Edit', 'Update Dates', 'Archive', 'Delete'}
-                              .map((String choice) {
-                            return PopupMenuItem<String>(
-                              value: choice,
-                              child: Container(child: Text(choice)),
-                            );
-                          }).toList();
-                        } else {
-                          return {'Delete'}.map((String choice) {
-                            return PopupMenuItem<String>(
-                              value: choice,
-                              child: Container(child: Text(choice)),
-                            );
-                          }).toList();
-                        }
-                      },
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      darkTheme: Contstants.getTheme("dark"),
+      theme: Contstants.getTheme("light"),
+      themeMode: _isDark ? ThemeMode.dark : ThemeMode.light,
+      home: Container(
+        child: DefaultTabController(
+          length: 3,
+          child: GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: Scaffold(
+              backgroundColor: _isDark ? Colors.blueGrey[700] : Colors.white,
+              appBar: AppBar(
+                backgroundColor:
+                    _isDark ? Colors.blueGrey : Colors.blueAccent[200],
+                bottom: TabBar(
+                  tabs: [
+                    Tab(
+                      child: Text(
+                        'Counter Info',
+                        style: TextStyle(
+                          color: _isDark ? Colors.white : Colors.white,
+                        ),
+                      ),
+                    ),
+                    Tab(
+                      child: Text(
+                        'Reset Counter History',
+                        style: TextStyle(
+                          color: _isDark ? Colors.white : Colors.white,
+                        ),
+                      ),
+                    ),
+                    Tab(
+                      child: Text(
+                        'Counter Update History',
+                        style: TextStyle(
+                          color: _isDark ? Colors.white : Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  RotatedBox(
+                    quarterTurns: 4,
+                    child: Container(
+                      child: PopupMenuButton<String>(
+                        //color: Colors.amber[300],
+                        onSelected: handleClick,
+                        color: _isDark ? Colors.blueGrey : Colors.white,
+
+                        itemBuilder: (BuildContext context) {
+                          if (isDeleted == 1) {
+                            return {'Edit', 'Update Dates', 'Archive', 'Delete'}
+                                .map((String choice) {
+                              return PopupMenuItem<String>(
+                                value: choice,
+                                child: Container(
+                                    child: Text(
+                                  choice,
+                                  style: TextStyle(
+                                    color:
+                                        _isDark ? Colors.white : Colors.black,
+                                  ),
+                                )),
+                              );
+                            }).toList();
+                          } else {
+                            return {'Delete'}.map((String choice) {
+                              return PopupMenuItem<String>(
+                                value: choice,
+                                child: Container(
+                                    child: Text(choice,
+                                        style: TextStyle(
+                                          color: _isDark
+                                              ? Colors.white
+                                              : Colors.black,
+                                        ))),
+                              );
+                            }).toList();
+                          }
+                        },
+                      ),
                     ),
                   ),
-                ),
-              ],
-              title: Text(counterName),
-              leading: IconButton(
-                  onPressed: () {
-                    Navigator.pop(context, counters);
-                  },
-                  icon: Icon(Icons.arrow_back)),
-            ),
-            body: GestureDetector(
-              onTap: () {
-                FocusScope.of(context).requestFocus(new FocusNode());
-              },
-              child: TabBarView(
-                children: [
-                  // Counter Info
-                  isLoadingpage
-                      ? Card(
-                          color: Colors.grey[300],
-                          child: Padding(
-                            padding: const EdgeInsets.all(10.0),
-                            child: Container(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Counter Name',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 19.0,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 1,
-                                        child: Text(
-                                          counterName != null
-                                              ? counterName
-                                              : "",
-                                          textAlign: TextAlign.end,
-                                          style: TextStyle(
-                                            fontSize: 16.0,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(
-                                    height: 20.0,
-                                  ),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Counter Value',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 19.0,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      Text(
-                                        counterValue,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 16.0,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  // SizedBox(
-                                  //   height: 20.0,
-                                  // ),
-                                  // Row(
-                                  //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  //   children: [
-                                  //     Text(
-                                  //       'Counter Color',
-                                  //       textAlign: TextAlign.center,
-                                  //       style: TextStyle(
-                                  //         fontSize: 19.0,
-                                  //         fontWeight: FontWeight.bold,
-                                  //         color: Colors.black,
-                                  //       ),
-                                  //     ),
-                                  //     Text(
-                                  //       "counterName",
-                                  //       textAlign: TextAlign.center,
-                                  //       style: TextStyle(
-                                  //         fontSize: 16.0,
-                                  //         color: Colors.black,
-                                  //       ),
-                                  //     ),
-                                  //   ],
-                                  // ),
-                                  SizedBox(
-                                    height: 20.0,
-                                  ),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        "Counter Last Updated On",
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 19.0,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      Text(
-                                        counterlastTimestamp,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 16.0,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Align(
-                                      alignment: Alignment.centerRight,
-                                      child: counters.length > 0
-                                          ? Contstants.displayTimer(
-                                              lastUpdatedduration,
-                                              counterlastTimestamp)
-                                          : Text("")),
-                                  SizedBox(
-                                    height: 20.0,
-                                  ),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Counter Created On',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 19.0,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      Text(
-                                        counterCreatedTimestamp,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 16.0,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Align(
-                                      alignment: Alignment.centerRight,
-                                      child: counters.length > 0
-                                          ? Contstants.displayTimer(
-                                              createdOnduration,
-                                              counterCreatedTimestamp)
-                                          : Text("")),
-                                  isReset == 0
-                                      ? Column(
-                                          children: [
-                                            SizedBox(
-                                              height: 30.0,
-                                            ),
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Number of Resets',
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize: 19.0,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.black,
-                                                  ),
-                                                ),
-                                                Align(
-                                                  alignment:
-                                                      Alignment.centerRight,
-                                                  child: Text(
-                                                    (_resetCounters.length - 1)
-                                                        .toString(),
-                                                    //textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                      fontSize: 16.0,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
-                                                ),
-                                                SizedBox(
-                                                  height: 30.0,
-                                                ),
-                                              ],
-                                            ),
-                                            SizedBox(
-                                              height: 30.0,
-                                            ),
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Last Resetted On',
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize: 19.0,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.black,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  resetCounters.length > 1
-                                                      ? resetCounters[1]
-                                                          .endtimeStamp
-                                                      : "",
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize: 16.0,
-                                                    color: Colors.black,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            Align(
-                                                alignment:
-                                                    Alignment.centerRight,
-                                                child: resetCounters.length > 1
-                                                    ? Contstants.displayTimer(
-                                                        lastResetOnduration,
-                                                        resetCounters[1]
-                                                            .endtimeStamp)
-                                                    : Text("")),
-                                            SizedBox(
-                                              height: 30.0,
-                                            ),
-                                          ],
-                                        )
-                                      : Text(""),
-                                  isDeleted == 0
-                                      ? Row(
+                ],
+                title: Text(counterName),
+                leading: IconButton(
+                    onPressed: () {
+                      Navigator.pop(context, counters);
+                    },
+                    icon: Icon(Icons.arrow_back)),
+              ),
+              body: GestureDetector(
+                onTap: () {
+                  FocusScope.of(context).requestFocus(new FocusNode());
+                },
+                child: TabBarView(
+                  children: [
+                    // Counter Info
+                    isLoadingpage
+                        ? SingleChildScrollView(
+                            child: Card(
+                                color: _isDark
+                                    ? Colors.grey[850]
+                                    : Colors.grey[300],
+                                child: Padding(
+                                  padding: const EdgeInsets.all(10.0),
+                                  child: Container(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
                                           mainAxisAlignment:
                                               MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
-                                              'Counter Archived On',
+                                              'Counter Name',
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                 fontSize: 19.0,
                                                 fontWeight: FontWeight.bold,
-                                                color: Colors.black,
+                                                color: _isDark
+                                                    ? Colors.white
+                                                    : Colors.black,
                                               ),
                                             ),
-                                            Text(
-                                              archiveTimestamp,
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: 16.0,
-                                                color: Colors.black,
+                                            Expanded(
+                                              flex: 1,
+                                              child: Text(
+                                                counterName != null
+                                                    ? counterName
+                                                    : "",
+                                                textAlign: TextAlign.end,
+                                                style: TextStyle(
+                                                  fontSize: 16.0,
+                                                  color: _isDark
+                                                      ? Colors.white
+                                                      : Colors.black,
+                                                ),
                                               ),
                                             ),
                                           ],
-                                        )
-                                      : Text(""),
-                                  isDeleted == 0
-                                      ? Align(
-                                          alignment: Alignment.centerRight,
-                                          child: counters.length > 0
-                                              ? Contstants.displayTimer(
-                                                  archiveduration,
-                                                  archiveTimestamp)
-                                              : Text(""))
-                                      : Text(""),
-                                  SizedBox(
-                                    height: 30.0,
-                                  ),
-
-                                  // Align(
-                                  //   alignment: Alignment.center,
-                                  //   // ignore: deprecated_member_use
-                                  //   child: FlatButton(
-                                  //     color: Colors.amber,
-                                  //     onPressed: () async {
-                                  //       // Navigator.push(
-                                  //       //   context,
-                                  //       //   MaterialPageRoute(
-                                  //       //       builder: (context) => Update(
-                                  //       //           counterId: counters[0].counterId)),
-                                  //     },
-                                  //     child: Text(
-                                  //       "Edit",
-                                  //       style: TextStyle(
-                                  //         color: Colors.purple,
-                                  //       ),
-                                  //     ),
-                                  //   ),
-                                  // ),
-                                  // SizedBox(
-                                  //   width: 25.0,
-                                  // ),
-                                ],
-                              ),
-                            ),
-                          ))
-                      : Center(
-                          child: SpinKitFadingFour(
-                            color: Colors.blue,
-                            size: 50.0,
-                          ),
-                        ),
-                  // Reset Counter History
-                  isLoadingpage
-                      ? Card(
-                          color: Colors.grey[300],
-                          child: resetCounters.length <= 0
-                              ? Container(
-                                  child: Icon(Icons.emoji_nature_outlined))
-                              : ListView.builder(
-                                  itemCount: resetCounters.length,
-                                  itemBuilder: (context, index) {
-                                    return Padding(
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                        ),
+                                        SizedBox(
+                                          height: 20.0,
+                                        ),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  (resetCounters.length - index)
-                                                          .toString() +
-                                                      ".",
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize: 15.0,
-                                                    color: Colors.black,
+                                            Text(
+                                              'Counter Value',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 19.0,
+                                                fontWeight: FontWeight.bold,
+                                                color: _isDark
+                                                    ? Colors.white
+                                                    : Colors.black,
+                                              ),
+                                            ),
+                                            Text(
+                                              counterValue,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 16.0,
+                                                color: _isDark
+                                                    ? Colors.white
+                                                    : Colors.black,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        // SizedBox(
+                                        //   height: 20.0,
+                                        // ),
+                                        // Row(
+                                        //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        //   children: [
+                                        //     Text(
+                                        //       'Counter Color',
+                                        //       textAlign: TextAlign.center,
+                                        //       style: TextStyle(
+                                        //         fontSize: 19.0,
+                                        //         fontWeight: FontWeight.bold,
+                                        //         color: Colors.black,
+                                        //       ),
+                                        //     ),
+                                        //     Text(
+                                        //       "counterName",
+                                        //       textAlign: TextAlign.center,
+                                        //       style: TextStyle(
+                                        //         fontSize: 16.0,
+                                        //         color: Colors.black,
+                                        //       ),
+                                        //     ),
+                                        //   ],
+                                        // ),
+                                        SizedBox(
+                                          height: 20.0,
+                                        ),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              "Counter Last Updated On",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 19.0,
+                                                fontWeight: FontWeight.bold,
+                                                color: _isDark
+                                                    ? Colors.white
+                                                    : Colors.black,
+                                              ),
+                                            ),
+                                            Text(
+                                              counterlastTimestamp,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 16.0,
+                                                color: _isDark
+                                                    ? Colors.white
+                                                    : Colors.black,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Align(
+                                            alignment: Alignment.centerRight,
+                                            child: counters.length > 0
+                                                ? Contstants.displayTimer(
+                                                    lastUpdatedduration,
+                                                    counterlastTimestamp,
+                                                    _isDark)
+                                                : Text("")),
+                                        SizedBox(
+                                          height: 20.0,
+                                        ),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Counter Created On',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 19.0,
+                                                fontWeight: FontWeight.bold,
+                                                color: _isDark
+                                                    ? Colors.white
+                                                    : Colors.black,
+                                              ),
+                                            ),
+                                            Text(
+                                              counterCreatedTimestamp,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 16.0,
+                                                color: _isDark
+                                                    ? Colors.white
+                                                    : Colors.black,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Align(
+                                            alignment: Alignment.centerRight,
+                                            child: counters.length > 0
+                                                ? Contstants.displayTimer(
+                                                    createdOnduration,
+                                                    counterCreatedTimestamp,
+                                                    _isDark)
+                                                : Text("")),
+                                        isReset == 0
+                                            ? Column(
+                                                children: [
+                                                  SizedBox(
+                                                    height: 30.0,
                                                   ),
-                                                ),
-                                                SizedBox(width: 30.0),
-                                                Text(
-                                                  resetCounters[index]
-                                                              .resetCounter !=
-                                                          null
-                                                      ? resetCounters[index]
-                                                          .resetCounter
-                                                          .toString()
-                                                      : "0",
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize: 35.0,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.black,
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
+                                                    children: [
+                                                      Align(
+                                                        alignment: Alignment
+                                                            .centerLeft,
+                                                        child: Text(
+                                                          'Number of Resets',
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          style: TextStyle(
+                                                            fontSize: 19.0,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: _isDark
+                                                                ? Colors.white
+                                                                : Colors.black,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        (_resetCounters.length -
+                                                                1)
+                                                            .toString(),
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style: TextStyle(
+                                                          fontSize: 16.0,
+                                                          color: _isDark
+                                                              ? Colors.white
+                                                              : Colors.black,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                ),
-                                                SizedBox(width: 20.0),
-                                                Expanded(
-                                                  child: Align(
-                                                    alignment:
-                                                        Alignment.centerRight,
-                                                    child: Text(
-                                                      resetCounters[index]
-                                                                  .endtimeStamp !=
-                                                              null
-                                                          ? resetCounters[index]
-                                                              .endtimeStamp
-                                                          : "",
-                                                      textAlign: TextAlign.end,
-                                                      style: TextStyle(
-                                                        fontSize: 16.0,
-                                                        color: Colors.black,
+                                                  SizedBox(
+                                                    height: 30.0,
+                                                  ),
+                                                  SizedBox(
+                                                    height: 30.0,
+                                                  ),
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        'Last Resetted On',
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style: TextStyle(
+                                                          fontSize: 19.0,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: _isDark
+                                                              ? Colors.white
+                                                              : Colors.black,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        resetCounters.length > 1
+                                                            ? resetCounters[1]
+                                                                .endtimeStamp
+                                                            : "",
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style: TextStyle(
+                                                          fontSize: 16.0,
+                                                          color: _isDark
+                                                              ? Colors.white
+                                                              : Colors.black,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Align(
+                                                      alignment:
+                                                          Alignment.centerRight,
+                                                      child: resetCounters
+                                                                  .length >
+                                                              1
+                                                          ? Contstants.displayTimer(
+                                                              lastResetOnduration,
+                                                              resetCounters[1]
+                                                                  .endtimeStamp,
+                                                              _isDark)
+                                                          : Text("")),
+                                                  SizedBox(
+                                                    height: 30.0,
+                                                  ),
+                                                ],
+                                              )
+                                            : Text(""),
+                                        isDeleted == 0
+                                            ? Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Text(
+                                                    'Counter Archived On',
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      fontSize: 19.0,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: _isDark
+                                                          ? Colors.white
+                                                          : Colors.black,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    archiveTimestamp,
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      fontSize: 16.0,
+                                                      color: _isDark
+                                                          ? Colors.white
+                                                          : Colors.black,
+                                                    ),
+                                                  ),
+                                                ],
+                                              )
+                                            : Text(""),
+                                        isDeleted == 0
+                                            ? Align(
+                                                alignment:
+                                                    Alignment.centerRight,
+                                                child: counters.length > 0
+                                                    ? Contstants.displayTimer(
+                                                        archiveduration,
+                                                        archiveTimestamp,
+                                                        _isDark)
+                                                    : Text(""))
+                                            : Text(""),
+                                        SizedBox(
+                                          height: 30.0,
+                                        ),
+
+                                        // Align(
+                                        //   alignment: Alignment.center,
+                                        //   // ignore: deprecated_member_use
+                                        //   child: FlatButton(
+                                        //     color: Colors.amber,
+                                        //     onPressed: () async {
+                                        //       // Navigator.push(
+                                        //       //   context,
+                                        //       //   MaterialPageRoute(
+                                        //       //       builder: (context) => Update(
+                                        //       //           counterId: counters[0].counterId)),
+                                        //     },
+                                        //     child: Text(
+                                        //       "Edit",
+                                        //       style: TextStyle(
+                                        //         color: Colors.purple,
+                                        //       ),
+                                        //     ),
+                                        //   ),
+                                        // ),
+                                        // SizedBox(
+                                        //   width: 25.0,
+                                        // ),
+                                      ],
+                                    ),
+                                  ),
+                                )),
+                          )
+                        : Center(
+                            child: SpinKitFadingFour(
+                              color: Colors.blue,
+                              size: 50.0,
+                            ),
+                          ),
+                    // Reset Counter History
+                    isLoadingpage
+                        ? Card(
+                            color:
+                                _isDark ? Colors.grey[850] : Colors.grey[300],
+                            child: resetCounters.length <= 0
+                                ? Container(
+                                    child: Icon(Icons.emoji_nature_outlined))
+                                : ListView.builder(
+                                    itemCount: resetCounters.length,
+                                    itemBuilder: (context, index) {
+                                      return Padding(
+                                        padding: const EdgeInsets.all(6.0),
+                                        child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    (resetCounters.length -
+                                                                index)
+                                                            .toString() +
+                                                        ".",
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      fontSize: 15.0,
+                                                      color: _isDark
+                                                          ? Colors.white
+                                                          : Colors.black,
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 30.0),
+                                                  Text(
+                                                    resetCounters[index]
+                                                                .resetCounter !=
+                                                            null
+                                                        ? resetCounters[index]
+                                                            .resetCounter
+                                                            .toString()
+                                                        : "0",
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      fontSize: 35.0,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: _isDark
+                                                          ? Colors.white
+                                                          : Colors.black,
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 20.0),
+                                                  Expanded(
+                                                    child: Align(
+                                                      alignment:
+                                                          Alignment.centerRight,
+                                                      child: Text(
+                                                        resetCounters[index]
+                                                                    .endtimeStamp !=
+                                                                null
+                                                            ? resetCounters[
+                                                                    index]
+                                                                .endtimeStamp
+                                                            : "",
+                                                        textAlign:
+                                                            TextAlign.end,
+                                                        style: TextStyle(
+                                                          fontSize: 16.0,
+                                                          color: _isDark
+                                                              ? Colors.white
+                                                              : Colors.black,
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
-                                                ),
-                                              ],
-                                            ),
-                                            SizedBox(
-                                              height: 20.0,
-                                            ),
-                                          ]),
-                                    );
-                                  },
-                                ))
-                      : Center(
-                          child: SpinKitFadingFour(
-                            color: Colors.blue,
-                            size: 50.0,
+                                                ],
+                                              ),
+                                              SizedBox(
+                                                height: 20.0,
+                                              ),
+                                            ]),
+                                      );
+                                    },
+                                  ))
+                        : Center(
+                            child: SpinKitFadingFour(
+                              color: Colors.blue,
+                              size: 50.0,
+                            ),
                           ),
-                        ),
-                  // Counter Update History
-                  isLoadingpage
-                      ? Card(
-                          color: Colors.grey[300],
-                          child:
-                              // historyCounters.length < 1
-                              //     ? Container(
-                              //         child: Icon(Icons.emoji_nature_outlined))
-                              //     :
-                              ListView.builder(
-                            itemCount: historyCounters.length,
-                            itemBuilder: (context, index) {
-                              return Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            (historyCounters.length - index)
-                                                    .toString() +
-                                                ".",
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 15.0,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          SizedBox(width: 20.0),
-                                          Expanded(
-                                            child: Text(
-                                              historyCounters[index].counter !=
-                                                      null
-                                                  ? historyCounters[index]
-                                                      .counter
-                                                  : "0",
+                    // Counter Update History
+                    isLoadingpage
+                        ? Card(
+                            color:
+                                _isDark ? Colors.grey[850] : Colors.grey[300],
+                            child:
+                                // historyCounters.length < 1
+                                //     ? Container(
+                                //         child: Icon(Icons.emoji_nature_outlined))
+                                //     :
+                                ListView.builder(
+                              itemCount: historyCounters.length,
+                              itemBuilder: (context, index) {
+                                return Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              (historyCounters.length - index)
+                                                      .toString() +
+                                                  ".",
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
-                                                fontSize: 20.0,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.black,
+                                                fontSize: 15.0,
+                                                color: _isDark
+                                                    ? Colors.white
+                                                    : Colors.black,
                                               ),
                                             ),
-                                          ),
-                                          SizedBox(width: 20.0),
-                                          Expanded(
-                                            child: Text(
-                                              historyCounters[index]
-                                                          .lasttimeStamp !=
-                                                      null
-                                                  ? historyCounters[index]
-                                                      .lasttimeStamp
-                                                  : "",
-                                              textAlign: TextAlign.end,
-                                              style: TextStyle(
-                                                fontSize: 16.0,
-                                                color: Colors.black,
+                                            SizedBox(width: 20.0),
+                                            Expanded(
+                                              child: Text(
+                                                historyCounters[index]
+                                                            .counter !=
+                                                        null
+                                                    ? historyCounters[index]
+                                                        .counter
+                                                    : "0",
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize: 20.0,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: _isDark
+                                                      ? Colors.white
+                                                      : Colors.black,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      SizedBox(
-                                        height: 20.0,
-                                      ),
-                                    ]),
-                              );
-                            },
-                          ))
-                      : Center(
-                          child: SpinKitFadingFour(
-                            color: Colors.blue,
-                            size: 50.0,
+                                            SizedBox(width: 20.0),
+                                            Expanded(
+                                              child: Text(
+                                                historyCounters[index]
+                                                            .lasttimeStamp !=
+                                                        null
+                                                    ? historyCounters[index]
+                                                        .lasttimeStamp
+                                                    : "",
+                                                textAlign: TextAlign.end,
+                                                style: TextStyle(
+                                                  fontSize: 16.0,
+                                                  color: _isDark
+                                                      ? Colors.white
+                                                      : Colors.black,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(
+                                          height: 20.0,
+                                        ),
+                                      ]),
+                                );
+                              },
+                            ))
+                        : Center(
+                            child: SpinKitFadingFour(
+                              color: Colors.blue,
+                              size: 50.0,
+                            ),
                           ),
-                        ),
 
-                  // Icon(Icons.directions_bike),
-                ],
+                    // Icon(Icons.directions_bike),
+                  ],
+                ),
               ),
             ),
           ),
@@ -780,125 +904,74 @@ class _CounterStatsState extends State<CounterStats> {
   }
 
   showAlertDialog(
-      BuildContext context, String title, String description, String value) {
-    // set up the AlertDialog
-    Stack alert = Stack(
-      children: <Widget>[
-        Container(
-          padding: EdgeInsets.only(
-            top: 16.0,
-            bottom: 16.0,
-            left: 16.0,
-            right: 16.0,
-          ),
-          margin: EdgeInsets.only(top: 66.0),
-          decoration: new BoxDecoration(
-            color: Colors.black.withOpacity(0.5),
-            shape: BoxShape.rectangle,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min, // To make the card compact
-            children: <Widget>[
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 24.0,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(height: 16.0),
-              Text(
-                description,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 16.0,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w500),
-              ),
-              SizedBox(height: 24.0),
-              value == 'Delete'
-                  ? Align(
-                      alignment: Alignment.bottomRight,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          // ignore: deprecated_member_use
-                          FlatButton(
-                            color: Colors.amber,
-                            onPressed: () {
-                              Navigator.of(context)
-                                  .pop(); // To close the dialog
-                            },
-                            child: Text(
-                              "Close",
-                              style: TextStyle(
-                                color: Colors.purple,
-                              ),
-                            ),
-                          ),
-                          // ignore: deprecated_member_use
-                          FlatButton(
-                            color: Colors.amber,
-                            onPressed: () async {
-                              rawDeleted = await _removeCounter();
-                              Navigator.of(context).pop();
-                              Loading();
-                              if (rawDeleted > 0) {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => Home()));
-                              }
-                            },
-                            child: Text(
-                              "OK",
-                              style: TextStyle(
-                                color: Colors.purple,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Align(
-                      alignment: Alignment.bottomRight,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          // ignore: deprecated_member_use
-                          FlatButton(
-                            color: Colors.amber,
-                            onPressed: () async {
-                              Navigator.of(context).pop();
-                            },
-                            child: Text(
-                              "OK",
-                              style: TextStyle(
-                                color: Colors.purple,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-            ],
-          ),
-        ),
-      ],
-    );
+      BuildContext context, String header, String message, String value) {
     // show the dialog
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.0),
+      builder: (context) => new AlertDialog(
+        backgroundColor: _isDark ? Colors.grey[850] : Colors.grey[300],
+        title: Center(
+          child: Text(
+            header,
+            style: TextStyle(
+              fontSize: 24.0,
+              fontWeight: FontWeight.w700,
+              color: _isDark ? Colors.white : Colors.black.withOpacity(0.5),
             ),
-            elevation: 0.0,
-            backgroundColor: Colors.transparent,
-            child: alert);
-      },
+          ),
+        ),
+        content: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              fontSize: 16.0,
+              color: _isDark ? Colors.white : Colors.black.withOpacity(0.5),
+              fontWeight: FontWeight.w500),
+        ),
+        actions: <Widget>[
+          value == 'Delete'
+              ? new ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    primary: _isDark
+                        ? Colors.blueGrey[700]
+                        : Colors.pink[900], // background
+                  ),
+                  onPressed: () async {
+                    rawDeleted = await _removeCounter();
+                    FocusScope.of(context).unfocus();
+                    Navigator.of(context).pop();
+                    Loading();
+                    if (rawDeleted > 0) {
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => Home()));
+                    }
+                  },
+                  child: Text("Delete"))
+              : Text(""),
+          SizedBox(height: 16),
+          value == 'Delete'
+              ? new ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    primary: _isDark
+                        ? Colors.blueGrey[700]
+                        : Colors.pink[900], // background
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: Text("Cancel"))
+              : new ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    primary: _isDark
+                        ? Colors.blueGrey[700]
+                        : Colors.pink[900], // background
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: Text("Ok"))
+        ],
+      ),
     );
   }
 
@@ -925,6 +998,7 @@ class _CounterStatsState extends State<CounterStats> {
 
     if (value == 'Edit') {
       showModalBottomSheet(
+          backgroundColor: _isDark ? Colors.grey[850] : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.0),
           ),
@@ -944,6 +1018,7 @@ class _CounterStatsState extends State<CounterStats> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             letterSpacing: 2.0,
+                            color: _isDark ? Colors.white : Colors.black,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -955,8 +1030,15 @@ class _CounterStatsState extends State<CounterStats> {
                           child: Column(
                             children: [
                               TextField(
-                                decoration:
-                                    InputDecoration(hintText: 'Counter Name'),
+                                decoration: InputDecoration(
+                                  hintText: 'Counter Name',
+                                  fillColor: Colors.white,
+                                  // // focusedBorder: OutlineInputBorder(
+                                  // //   borderSide: const BorderSide(
+                                  // //       color: Colors.white, width: 2.0),
+                                  // //   borderRadius: BorderRadius.circular(25.0),
+                                  filled: true,
+                                ),
                                 autofocus: true,
                                 controller: textFieldController,
                                 maxLength: 30,
@@ -974,7 +1056,9 @@ class _CounterStatsState extends State<CounterStats> {
                                   Icons.update,
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  primary: Colors.pink[900],
+                                  primary: _isDark
+                                      ? Colors.blueGrey[700]
+                                      : Colors.pink[900],
                                 ),
                               ),
                             ],
@@ -988,6 +1072,7 @@ class _CounterStatsState extends State<CounterStats> {
               ));
     } else {
       showModalBottomSheet(
+          backgroundColor: _isDark ? Colors.grey[850] : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.0),
           ),
@@ -1006,6 +1091,7 @@ class _CounterStatsState extends State<CounterStats> {
                         style: TextStyle(
                           letterSpacing: 2.0,
                           fontWeight: FontWeight.bold,
+                          color: _isDark ? Colors.white : Colors.black,
                         ),
                       ),
                       Padding(
@@ -1017,6 +1103,8 @@ class _CounterStatsState extends State<CounterStats> {
                               TextField(
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
+                                  fillColor: Colors.white,
+                                  filled: true,
                                 ),
                                 readOnly: true,
                                 enabled: false,
@@ -1043,6 +1131,8 @@ class _CounterStatsState extends State<CounterStats> {
                               TextField(
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
+                                  fillColor: Colors.white,
+                                  filled: true,
                                 ),
                                 readOnly: true,
                                 enabled: false,
@@ -1119,7 +1209,9 @@ class _CounterStatsState extends State<CounterStats> {
                                   Icons.update_sharp,
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  primary: Colors.pink[900],
+                                  primary: _isDark
+                                      ? Colors.blueGrey[700]
+                                      : Colors.pink[900],
                                 ),
                               ),
                             ],

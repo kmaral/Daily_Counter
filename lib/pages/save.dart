@@ -1,8 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:my_counter/custom/constants.dart';
 import 'package:my_counter/models/CounterInfo.dart';
 import 'package:my_counter/services/counter_dbhelper.dart';
 import 'package:intl/intl.dart';
+import 'package:my_counter/services/counter_sharedpref.dart';
 import 'home.dart';
 
 class Save extends StatefulWidget {
@@ -13,6 +14,14 @@ class Save extends StatefulWidget {
 class _SaveState extends State<Save> {
   CounterDBHelper _counterDBHelper = CounterDBHelper();
   TextEditingController textFieldController = TextEditingController();
+  bool _isDark = false;
+
+  @override
+  void initState() {
+    getSFvalue();
+    super.initState();
+  }
+
   @override
   void dispose() {
     // Clean up the controller when the widget is disposed.
@@ -20,62 +29,89 @@ class _SaveState extends State<Save> {
     super.dispose();
   }
 
+  void getSFvalue() async {
+    String value = await CounterSharedPref.getTheme("themeInfo");
+    if (value != null && value == "true") {
+      setState(() {
+        _isDark = true;
+      });
+    } else {
+      setState(() {
+        _isDark = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          title: Text('Add New Counter'),
-          centerTitle: true,
-          // automaticallyImplyLeading: false,
-          backgroundColor: Colors.blueAccent[200],
-          elevation: 0.0,
-        ),
-        body: Card(
-          color: Colors.grey[300],
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Container(
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      darkTheme: Contstants.getTheme("dark"),
+      theme: Contstants.getTheme("light"),
+      themeMode: _isDark ? ThemeMode.dark : ThemeMode.light,
+      home: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
+          backgroundColor: _isDark ? Colors.grey[850] : Colors.white,
+          appBar: AppBar(
+            title: Text('Add New Counter'),
+            automaticallyImplyLeading: false,
+            centerTitle: true,
+            // automaticallyImplyLeading: false,
+            backgroundColor: _isDark ? Colors.blueGrey : Colors.blueAccent[200],
+            elevation: 0.0,
+            leading: IconButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                icon: Icon(Icons.arrow_back)),
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: SingleChildScrollView(
+              // color: _isDark ? Colors.grey[850] : Colors.grey[300],
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  // Text(
+                  //   'Name the Counter',
+                  //   style: TextStyle(
+                  //     letterSpacing: 2.0,
+                  //     color: _isDark ? Colors.white : Colors.black,
+                  //     fontWeight: FontWeight.bold,
+                  //   ),
+                  // ),
+                  // SizedBox(
+                  //   height: 5.0,
+                  // ),
+                  TextField(
+                    controller: textFieldController,
+                    decoration: InputDecoration(
+                      labelText: 'Counter Name',
+                      fillColor: _isDark ? Colors.white : Colors.black,
+                      filled: _isDark,
+                    ),
+                    maxLength: 30,
+                  ),
+                  SizedBox(height: 5.0),
+                  Row(
                     children: [
-                      Text(
-                        'Name the Counter',
-                        style: TextStyle(
-                          letterSpacing: 2.0,
-                          fontWeight: FontWeight.bold,
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          onSaveCounter(textFieldController.text);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => Home()),
+                          );
+                        },
+                        label: Text('Save the Counter'),
+                        icon: Icon(
+                          Icons.save_sharp,
                         ),
-                      ),
-                      TextField(
-                        controller: textFieldController,
-                        decoration: InputDecoration(labelText: ''),
-                        maxLength: 30,
-                      ),
-                      SizedBox(height: 5.0),
-                      
-                      Row(
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              onSaveCounter(textFieldController.text);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => Home()),
-                              );
-                            },
-                            label: Text('Save the Counter'),
-                            icon: Icon(
-                              Icons.save_sharp,
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              primary: Colors.pink[900],
-                            ),
-                          ),
-                        ],
+                        style: ElevatedButton.styleFrom(
+                          primary:
+                              _isDark ? Colors.blueGrey[700] : Colors.pink[900],
+                        ),
                       ),
                     ],
                   ),
